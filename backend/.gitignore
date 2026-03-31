@@ -1,0 +1,13 @@
+.env
+.env.example
+__pycache__/
+
+# Byte-compiled / optimized / DLL files
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+# Distribution / packaging
+.Python
+build/
