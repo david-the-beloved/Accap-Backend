@@ -1,0 +1,4 @@
+app = "accap-backend"
+
+[deploy]
+  release_command = "alembic upgrade head"
