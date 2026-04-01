@@ -10,6 +10,20 @@ jobs:
     env:
       FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
       FLY_APP_NAME: ${{ secrets.FLY_APP_NAME }}
+      FLY_ORG: ${{ secrets.FLY_ORG }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      SUPABASE_DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+      ALLOWED_ORIGINS: ${{ secrets.ALLOWED_ORIGINS }}
+      SMTP_HOST: ${{ secrets.SMTP_HOST }}
+      SMTP_PORT: ${{ secrets.SMTP_PORT }}
+      SMTP_USER: ${{ secrets.SMTP_USER }}
+      SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+      SMTP_FROM_EMAIL: ${{ secrets.SMTP_FROM_EMAIL }}
+      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+      RESEND_FROM_EMAIL: ${{ secrets.RESEND_FROM_EMAIL }}
+      SCHEDULER_TIMEZONE: ${{ secrets.SCHEDULER_TIMEZONE }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -23,6 +37,40 @@ jobs:
           set -euo pipefail
           test -n "${FLY_API_TOKEN:-}" || (echo "Missing GitHub secret: FLY_API_TOKEN" && exit 1)
           test -n "${FLY_APP_NAME:-}" || (echo "Missing GitHub secret: FLY_APP_NAME" && exit 1)
+          test -n "${JWT_SECRET:-}" || (echo "Missing GitHub secret: JWT_SECRET" && exit 1)
+          test -n "${ALLOWED_ORIGINS:-}" || (echo "Missing GitHub secret: ALLOWED_ORIGINS" && exit 1)
+          if [ -z "${DATABASE_URL:-}" ] && [ -z "${SUPABASE_DATABASE_URL:-}" ]; then
+            echo "Set at least one of DATABASE_URL or SUPABASE_DATABASE_URL"
+            exit 1
+          fi
+
+      - name: Sync app runtime secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=(--app "$FLY_APP_NAME")
+
+          # Required runtime secrets
+          [ -n "${JWT_SECRET:-}" ] && args+=("JWT_SECRET=${JWT_SECRET}")
+          [ -n "${ALLOWED_ORIGINS:-}" ] && args+=("ALLOWED_ORIGINS=${ALLOWED_ORIGINS}")
+          [ -n "${DATABASE_URL:-}" ] && args+=("DATABASE_URL=${DATABASE_URL}")
+          [ -n "${SUPABASE_DATABASE_URL:-}" ] && args+=("SUPABASE_DATABASE_URL=${SUPABASE_DATABASE_URL}")
+
+          # Optional runtime secrets
+          [ -n "${GOOGLE_CLIENT_ID:-}" ] && args+=("GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}")
+          [ -n "${SMTP_HOST:-}" ] && args+=("SMTP_HOST=${SMTP_HOST}")
+          [ -n "${SMTP_PORT:-}" ] && args+=("SMTP_PORT=${SMTP_PORT}")
+          [ -n "${SMTP_USER:-}" ] && args+=("SMTP_USER=${SMTP_USER}")
+          [ -n "${SMTP_PASSWORD:-}" ] && args+=("SMTP_PASSWORD=${SMTP_PASSWORD}")
+          [ -n "${SMTP_FROM_EMAIL:-}" ] && args+=("SMTP_FROM_EMAIL=${SMTP_FROM_EMAIL}")
+          [ -n "${RESEND_API_KEY:-}" ] && args+=("RESEND_API_KEY=${RESEND_API_KEY}")
+          [ -n "${RESEND_FROM_EMAIL:-}" ] && args+=("RESEND_FROM_EMAIL=${RESEND_FROM_EMAIL}")
+          [ -n "${SCHEDULER_TIMEZONE:-}" ] && args+=("SCHEDULER_TIMEZONE=${SCHEDULER_TIMEZONE}")
+
+          # Only invoke flyctl secrets set if we have values beyond --app
+          if [ ${#args[@]} -gt 1 ]; then
+            flyctl secrets set "${args[@]}"
+          fi
 
       - name: Ensure Fly app exists
         shell: bash
@@ -30,8 +78,8 @@ jobs:
           set -euo pipefail
           if ! flyctl apps show "$FLY_APP_NAME" >/dev/null 2>&1; then
             echo "App '$FLY_APP_NAME' not found. Creating it now..."
-            if [ -n "${{ secrets.FLY_ORG:- }}" ]; then
-              flyctl apps create "$FLY_APP_NAME" --org "${{ secrets.FLY_ORG }}"
+            if [ -n "${FLY_ORG:-}" ]; then
+              flyctl apps create "$FLY_APP_NAME" --org "$FLY_ORG"
             else
               flyctl apps create "$FLY_APP_NAME"
             fi
