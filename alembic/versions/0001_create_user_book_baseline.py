@@ -15,21 +15,33 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.create_table(
-        'user_book_baseline',
-        sa.Column('id', sa.Integer, primary_key=True, nullable=False),
-        sa.Column('user_id', sa.Integer, sa.ForeignKey(
-            'user.id'), nullable=False, index=True),
-        sa.Column('book_version', sa.String(
-            length=255), nullable=False, index=True),
-        sa.Column('baseline_page', sa.Integer,
-                  nullable=False, server_default='0'),
-        sa.Column('baseline_chapter', sa.String(length=255), nullable=True),
-        sa.Column('created_at', sa.DateTime(), nullable=False,
-                  server_default=sa.text('now()')),
-    )
-    op.create_unique_constraint('uq_user_book_baseline', 'user_book_baseline', [
-                                'user_id', 'book_version'])
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+
+    if 'user_book_baseline' not in inspector.get_table_names():
+        op.create_table(
+            'user_book_baseline',
+            sa.Column('id', sa.Integer, primary_key=True, nullable=False),
+            sa.Column('user_id', sa.Integer, sa.ForeignKey(
+                'user.id'), nullable=False, index=True),
+            sa.Column('book_version', sa.String(
+                length=255), nullable=False, index=True),
+            sa.Column('baseline_page', sa.Integer,
+                      nullable=False, server_default='0'),
+            sa.Column('baseline_chapter', sa.String(length=255), nullable=True),
+            sa.Column('created_at', sa.DateTime(), nullable=False,
+                      server_default=sa.text('now()')),
+        )
+
+    uq_names = {
+        c.get('name') for c in inspector.get_unique_constraints('user_book_baseline')
+    }
+    if 'uq_user_book_baseline' not in uq_names:
+        op.create_unique_constraint(
+            'uq_user_book_baseline',
+            'user_book_baseline',
+            ['user_id', 'book_version'],
+        )
 
 
 def downgrade() -> None:
