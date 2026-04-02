@@ -9,12 +9,21 @@ def _build_database_url() -> str:
     return settings.effective_database_url
 
 
+def _build_connect_args() -> dict:
+    # Supabase pooler (pgbouncer) can break with server-side prepared statements.
+    # Disabling auto-preparation avoids DuplicatePreparedStatement errors.
+    if settings.uses_supabase_pooler:
+        return {"prepare_threshold": None}
+    return {}
+
+
 engine = create_engine(
     _build_database_url(),
     echo=False,
     pool_pre_ping=True,
     pool_recycle=300,
     pool_timeout=30,
+    connect_args=_build_connect_args(),
 )
 
 

@@ -32,7 +32,8 @@ class Settings(BaseSettings):
         elif db_url.startswith("postgresql://"):
             db_url = "postgresql+psycopg://" + db_url[len("postgresql://"):]
         elif db_url.startswith("postgresql+psycopg2://"):
-            db_url = "postgresql+psycopg://" + db_url[len("postgresql+psycopg2://"):]
+            db_url = "postgresql+psycopg://" + \
+                db_url[len("postgresql+psycopg2://"):]
 
         # Supabase pooler endpoint should use 6543, not 5432.
         if "pooler.supabase.com" in db_url and ":5432/" in db_url:
@@ -44,6 +45,10 @@ class Settings(BaseSettings):
             db_url = f"{db_url}{separator}sslmode=require"
 
         return db_url
+
+    @property
+    def uses_supabase_pooler(self) -> bool:
+        return "pooler.supabase.com" in self.effective_database_url
 
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8")
