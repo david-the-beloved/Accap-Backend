@@ -36,7 +36,12 @@ def upgrade() -> None:
     uq_names = {
         c.get('name') for c in inspector.get_unique_constraints('user_book_baseline')
     }
-    if 'uq_user_book_baseline' not in uq_names:
+    uq_relation_exists = bind.execute(
+        sa.text("SELECT 1 FROM pg_class WHERE relname = :name LIMIT 1"),
+        {"name": "uq_user_book_baseline"},
+    ).scalar() is not None
+
+    if 'uq_user_book_baseline' not in uq_names and not uq_relation_exists:
         op.create_unique_constraint(
             'uq_user_book_baseline',
             'user_book_baseline',
