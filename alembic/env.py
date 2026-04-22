@@ -41,7 +41,8 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
-    connect_args = {"prepare_threshold": None} if settings.uses_supabase_pooler else {}
+    connect_args = {
+        "prepare_threshold": None} if settings.uses_supabase_pooler else {}
 
     connectable = engine_from_config(
         config.get_section(config.config_ini_section),
